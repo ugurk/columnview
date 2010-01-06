@@ -1,13 +1,11 @@
 /** 
- *  jquery.columnview-1.1.1.js
+ *  jquery.columnview.js
  *  
  *  Created by Chris Yates on 2009-02-26.
  *  http://christianyates.com
  *  Copyright 2009 Christian Yates and ASU Mars Space Flight Facility. All rights reserved.
  *  
- *  Requires jQuery 1.3.x
- *  Also available with jQuery 1.2.6 support (with Live Query plugin) - see
- *  http://christianyates.com/blog/jquery/finder-column-view-hierarchical-lists-jquery
+ *  Requires jquery.livequery.js - http://docs.jquery.com/Plugins/livequery
  *  
  *  Tested with Firefox 3.x, Safari 3.x,4.x, Internet Explorer 6.x,7.x
  *  Dual licensed under MIT and GPL.
@@ -32,6 +30,7 @@
           height:100%;\
           overflow-y:scroll;\
           overflow-x:hidden;\
+          // float:left;\
           position:absolute;\
         }\
         .containerobj a {\
@@ -39,6 +38,7 @@
           clear:both;\
           white-space:nowrap;\
           min-width:150px;\
+          position:relative;\
         }\
         .containerobj a canvas{\
           padding-left:1em;\
@@ -68,17 +68,15 @@
         }\
       </style>');
     }
-    
     // Hide original list
     $(this).hide();
-    
     // Create new top container from top-level LI tags
     var top = $(this).children('li');
-    var container = $('<div/>').addClass('containerobj').attr('id','cv'+Math.floor(Math.random()*10e10)).insertAfter(this);
+    var container = $('<div/>').addClass('containerobj').insertAfter(this);
     var topdiv = $('<div class="top"></div>').appendTo(container);
     if($.browser.msie) { $('.top').width('200px'); } // Cuz IE don't support auto width
     $.each(top,function(i,item){
-      var topitem = $(':eq(0)',item).clone().data('sub',$(item).children('ul')).appendTo(topdiv);
+      var topitem = $(':eq(0)',item).clone().data('sub',$(' > ul',item)).appendTo(topdiv);
       if($(topitem).data('sub').length) {
         $(topitem).addClass('hasChildMenu');
         if($.browser.safari){
@@ -87,58 +85,56 @@
         addWidget(topitem);
       }
     });
-    
     // Event handling functions
-    $('a',container).live("click",function(){
-      var container = $(this).parents('.containerobj');
+    $('a',container).livequery(function(){
       // Handle clicks
-      var level = $('div',container).index($(this).parents('div'));
-      // Remove blocks to the right in the tree, and 'deactivate' other links within the same level
-      $('div:gt('+level+')',container).remove();
-      $('div:eq('+level+') a',container).removeClass('active').removeClass('inpath');
-      $('.active',container).addClass('inpath');
-      $(this).addClass('active');
-      if($(this).data('sub').children('li').length) {
-        // Menu has children, so add another submenu
-        submenu(container,this);
-      } else {
-        // No children, show title instead (if it exists, or a link)
-        var title = $('<a/>').attr({href:$(this).attr('href')}).text($(this).attr('title') ? $(this).attr('title') : $(this).text());
-        var featurebox = $('<div/>').html(title).addClass('feature').appendTo(container);
-        // Set the width
-        var remainingspace = 0;
-        $.each($(container).children('div').slice(0,-1),function(i,item){
-          remainingspace += $(item).width();
-        });
-        var fillwidth = $(container).width() - remainingspace;
-        $(featurebox).css({'top':0,'left':remainingspace}).width(fillwidth).show();
-      }
-      return false;
-    }); 
-
-    // Keyboard navigation
-    $('a',container).live('keydown',function(key){
-      switch(key.which){
-        case(37): //left
-          $(this).parent().prev().children('.active').focus().click();
-          break;
-        case(38): //up
-          $(this).prev().focus().click();
-          break;
-        case(39): //right
-          if($(this).hasClass('hasChildMenu')){
-            $(this).parent().next().children('a:first').focus().click();            
-          }
-          break;
-        case(40): //down        
-          $(this).next().focus().click();
-          break;
-        case(13): //enter
-          $(this).dblclick();
-          break;
-      }
+      $(this).click(function(){
+        var level = $('div',container).index($(this).parents('div'));
+        // Remove blocks to the right in the tree, and 'deactivate' other links within the same level
+        $('div:gt('+level+')',container).remove();
+        $('div:eq('+level+') a',container).removeClass('active').removeClass('inpath');
+        $('.active',container).addClass('inpath');
+        $(this).addClass('active');
+        if($(this).data('sub').children('li').length) {
+          // Menu has children, so add another submenu
+          submenu(container,this);
+        } else {
+          // No children, show title instead (if it exists, or a link)
+          var title = $('<a/>').attr({href:$(this).attr('href')}).text($(this).attr('title') ? $(this).attr('title') : $(this).text());
+          var featurebox = $('<div/>').html(title).addClass('feature').hide().appendTo(container);
+          // Set the width
+          var remainingspace = 0;
+          $.each($(container).children('div').slice(0,-1),function(i,item){
+            remainingspace += $(item).width();
+          });
+          var fillwidth = $(container).width() - remainingspace - 1;
+          $(featurebox).css({'top':0,'left':remainingspace}).width(fillwidth).show();
+        }
+        return false;
+      }); 
+      // Keyboard navigation
+      $(this).keydown(function(key){
+        switch(key.which){
+          case(37): //left
+            $(this).parent().prev().children('.active').focus().click();
+            break;
+          case(38): //up
+            $(this).prev().focus().click();
+            break;
+          case(39): //right
+            if($(this).hasClass('hasChildMenu')){
+              $(this).parent().next().children('a:first').focus().click();            
+            }
+            break;
+          case(40): //down        
+            $(this).next().focus().click();
+            break;
+          case(13): //enter
+            $(this).dblclick();
+            break;
+        }
+      });
     });
-
   }; 
   
   // Generate deeper level menus
@@ -165,7 +161,8 @@
   // Uses canvas, if available, to draw a triangle to denote that item is a parent
   function addWidget(item, color){
     var triheight = $(item).height();
-    var canvas = $("<canvas></canvas>").attr({height:triheight,width:10}).addClass('widget').prependTo(item);    if(!color){ color = $(canvas).css('color'); }
+    var canvas = $("<canvas></canvas>").attr({height:triheight,width:10}).addClass('widget').prependTo(item);
+    if(!color){ color = $(canvas).css('color'); }
     canvas = $(canvas).get(0);
     if(canvas.getContext){
       var context = canvas.getContext('2d');
@@ -185,5 +182,4 @@
       $("<span>&#9658;</span>").addClass('widget').css({'height':triheight,'width':10}).prependTo(item);
     }
   } 
-  
 })(jQuery);
