@@ -12,7 +12,10 @@
  */
 
 (function($){
-  $.fn.columnview = function(){
+  $.fn.columnview = function(options){
+    
+    var settings = $.extend({}, $.fn.columnview.defaults, options);
+        
     // Add stylesheet, but only once
     if(!$('.containerobj').get(0)){
       $('head').prepend('\
@@ -39,7 +42,7 @@
           padding-right:15px;\
         }\
         .containerobj a:focus {\
-          // outline:none;\
+          outline:none;\
         }\
         .containerobj a canvas{\
           padding-left:1em;\
@@ -72,10 +75,13 @@
 
     // Hide original list
     $(this).hide();
+    // Reset the original list's id
+    var origid = $(this).attr('id');
+    $(this).attr('id', origid + "-processed");
 
     // Create new top container from top-level LI tags
     var top = $(this).children('li');
-    var container = $('<div/>').addClass('containerobj').attr('id','cv'+Math.floor(Math.random()*10e10)).insertAfter(this);
+    var container = $('<div/>').addClass('containerobj').attr('id', origid).insertAfter(this);
     var topdiv = $('<div class="top"></div>').appendTo(container);
     if($.browser.msie) { $('.top').width('200px'); } // Cuz IE don't support auto width
     $.each(top,function(i,item){
@@ -90,20 +96,37 @@
     $(container).bind("click keydown", function(event){
       if ($(event.target).is("a")) {
         var self = event.target;
+        if (!settings.multi) {
+          delete event.shiftKey;
+          delete event.metaKey;
+        }
         self.focus();
         var container = $(self).parents('.containerobj');
         // Handle clicks
         if (event.type == "click"){
           var level = $('div',container).index($(self).parents('div'));
-          // Remove blocks to the right in the tree, and 'deactivate' other links within the same level
+          // Remove blocks to the right in the tree, and 'deactivate' other
+          // links within the same level, if metakey is not being used
           $('div:gt('+level+')',container).remove();
-          $('div:eq('+level+') a',container).removeClass('active').removeClass('inpath');
-          $('.active',container).addClass('inpath');
+          if (!event.metaKey && !event.shiftKey) {
+            $('div:eq('+level+') a',container).removeClass('active').removeClass('inpath');
+            $('.active',container).addClass('inpath');
+            $('div:lt('+level+') a',container).removeClass('active');
+          }
+          // Select intermediate items when shift clicking
+          // Sorry, only works with jQuery 1.4 due to changes in the .index() function
+          if (event.shiftKey) {
+            var first = $('a.active:first', $(self).parent()).index();
+            var cur = $(self).index();
+            var range = [first,cur].sort(function(a,b){return a - b;});
+            $('div:eq('+level+') a', container).slice(range[0], range[1]).addClass('active');
+          }
           $(self).addClass('active');
-          if($(self).data('sub').children('li').length) {
+          if ($(self).data('sub').children('li').length && !event.metaKey) {
             // Menu has children, so add another submenu
             submenu(container,self);
-          } else {
+          }
+          else if (!event.metaKey && !event.shiftKey) {
             // No children, show title instead (if it exists, or a link)
             var title = $('<a/>').attr({href:$(self).attr('href')}).text($(self).attr('title') ? $(self).attr('title') : $(self).text());
             var featurebox = $('<div/>').html(title).addClass('feature').appendTo(container);
@@ -113,14 +136,14 @@
               remainingspace += $(item).width();
             });
             var fillwidth = $(container).width() - remainingspace;
-            $(featurebox).css({'top':0,'left':remainingspace}).width(fillwidth).show();
+            $(featurebox).css({'top':0,'left':remainingspace}).width(fillwidth).show();  
           }
         }
         // Handle Keyboard navigation
         if(event.type == "keydown"){
           switch(event.keyCode){
             case(37): //left
-              $(self).parent().prev().children('.active').focus().trigger("click");
+              $(self).parent().prev().children('.inpath').focus().trigger("click");
               break;
             case(38): //up
               $(self).prev().focus().trigger("click");
@@ -142,6 +165,10 @@
       }
     });
 
+  };
+  
+  $.fn.columnview.defaults = {
+    multi: true
   };
 
   // Generate deeper level menus
