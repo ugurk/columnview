@@ -77,7 +77,9 @@
     $(this).hide();
     // Reset the original list's id
     var origid = $(this).attr('id');
-    $(this).attr('id', origid + "-processed");
+    if (origid) {
+      $(this).attr('id', origid + "-processed");
+    }
 
     // Create new top container from top-level LI tags
     var top = $(this).children('li');
@@ -130,6 +132,11 @@
             // No children, show title instead (if it exists, or a link)
             var title = $('<a/>').attr({href:$(self).attr('href')}).text($(self).attr('title') ? $(self).attr('title') : $(self).text());
             var featurebox = $('<div/>').html(title).addClass('feature').appendTo(container);
+            // Fire preview handler function
+            if ($.isFunction(settings.preview)) {
+              // We're passing the element back to the callback
+              var preview = settings.preview($(self));
+            }
             // Set the width
             var remainingspace = 0;
             $.each($(container).children('div').slice(0,-1),function(i,item){
@@ -168,7 +175,8 @@
   };
   
   $.fn.columnview.defaults = {
-    multi: false
+    multi: false,   // Allow multiple selections
+    preview: false  // Handler for preview pane
   };
 
   // Generate deeper level menus
