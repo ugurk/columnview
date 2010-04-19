@@ -168,7 +168,7 @@
   };
   
   $.fn.columnview.defaults = {
-    multi: true
+    multi: false
   };
 
   // Generate deeper level menus
