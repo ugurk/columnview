@@ -85,7 +85,7 @@
     var topdiv = $('<div class="top"></div>').appendTo(container);
     if($.browser.msie) { $('.top').width('200px'); } // Cuz IE don't support auto width
     $.each(top,function(i,item){
-      var topitem = $(':eq(0)',item).clone().data('sub',$(item).children('ul')).appendTo(topdiv);
+      var topitem = $(':eq(0)',item).clone(true).data('sub',$(item).children('ul')).appendTo(topdiv);
       if($(topitem).data('sub').length) {
         $(topitem).addClass('hasChildMenu');
         addWidget(topitem);
@@ -181,7 +181,7 @@
     if($.browser.msie) { $(submenu).width('200px'); } // Cuz IE don't support auto width
     var subitems = $(item).data('sub').children('li');
     $.each(subitems,function(i,subitem){
-      var subsubitem = $(':eq(0)',subitem).clone().data('sub',$(subitem).children('ul')).appendTo(submenu);
+      var subsubitem = $(':eq(0)',subitem).clone(true).data('sub',$(subitem).children('ul')).appendTo(submenu);
       if($(subsubitem).data('sub').length) {
         $(subsubitem).addClass('hasChildMenu');
         addWidget(subsubitem);
