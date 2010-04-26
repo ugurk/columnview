@@ -13,7 +13,7 @@
 
 (function($){
   $.fn.columnview = function(options){
-    
+
     var settings = $.extend({}, $.fn.columnview.defaults, options);
         
     // Add stylesheet, but only once
@@ -36,19 +36,20 @@
         }\
         .containerobj a {\
           display:block;\
-          clear:both;\
           white-space:nowrap;\
-          min-width:150px;\
+          clear:both;\
           padding-right:15px;\
+          overflow:hidden;\
+          text-decoration:none;\
         }\
         .containerobj a:focus {\
           outline:none;\
         }\
-        .containerobj a canvas{\
-          padding-left:1em;\
+        .containerobj a canvas {\
         }\
         .containerobj .feature {\
           min-width:200px;\
+          overflow-y:auto;\
         }\
         .containerobj .feature a {\
           white-space:normal;\
@@ -63,7 +64,7 @@
           background-color:#d0d0d0;\
           color:#000;\
         }\
-        .containerobj .hasChildMenu .widget{\
+        .containerobj .hasChildMenu .widget {\
           color:black;\
           position:absolute;\
           right:0;\
@@ -85,19 +86,34 @@
     var top = $(this).children('li');
     var container = $('<div/>').addClass('containerobj').attr('id', origid).insertAfter(this);
     var topdiv = $('<div class="top"></div>').appendTo(container);
-    if($.browser.msie) { $('.top').width('200px'); } // Cuz IE don't support auto width
+    // Set column width
+    if (settings.fixedwidth || $.browser.msie) { // MSIE doesn't support auto-width
+      var width = typeof settings.fixedwidth == "string" ? settings.fixedwidth : '200px';
+      $('.top').width(width);
+    }
     $.each(top,function(i,item){
-      var topitem = $(':eq(0)',item).clone(true).data('sub',$(item).children('ul')).appendTo(topdiv);
+      var topitem = $(':eq(0)',item).clone(true).wrapInner("<span/>").data('sub',$(item).children('ul')).appendTo(topdiv);
+      if (settings.fixedwidth || $.browser.msie)
+      $(topitem).css({'text-overflow':'ellipsis', '-o-text-overflow':'ellipsis','-ms-text-overflow':'ellipsis'});
       if($(topitem).data('sub').length) {
         $(topitem).addClass('hasChildMenu');
         addWidget(topitem);
       }
     });
 
+    // Firefox doesn't repeat keydown events when the key is held, so we use
+    // keypress with FF/Gecko/Mozilla to enable continuous keyboard scrolling.
+    var key_event = $.browser.mozilla ? 'keypress' : 'keydown';
+    
     // Event handling functions
-    $(container).bind("click keydown", function(event){
-      if ($(event.target).is("a")) {
-        var self = event.target;
+    $(container).bind("click " + key_event, function(event){
+      if ($(event.target).is("a,span")) {
+        if ($(event.target).is("span")){
+          var self = $(event.target).parent();
+        }
+        else {
+          var self = event.target;          
+        }
         if (!settings.multi) {
           delete event.shiftKey;
           delete event.metaKey;
@@ -126,7 +142,10 @@
           $(self).addClass('active');
           if ($(self).data('sub').children('li').length && !event.metaKey) {
             // Menu has children, so add another submenu
-            submenu(container,self);
+            var w = false;
+            if (settings.fixedwidth || $.browser.msie)
+            w = typeof settings.fixedwidth == "string" ? settings.fixedwidth : '200px';
+            submenu(container,self,w);
           }
           else if (!event.metaKey && !event.shiftKey) {
             // No children, show title instead (if it exists, or a link)
@@ -147,7 +166,7 @@
           }
         }
         // Handle Keyboard navigation
-        if(event.type == "keydown"){
+        if(event.type == key_event){
           switch(event.keyCode){
             case(37): //left
               $(self).parent().prev().children('.inpath').focus().trigger("click");
@@ -175,21 +194,26 @@
   };
   
   $.fn.columnview.defaults = {
-    multi: false,   // Allow multiple selections
-    preview: false  // Handler for preview pane
+    multi: false,     // Allow multiple selections
+    preview: false,   // Handler for preview pane
+    fixedwidth: false // Use fixed width columns
   };
 
   // Generate deeper level menus
-  function submenu(container,item){
+  function submenu(container,item,width){
     var leftPos = 0;
     $.each($(container).children('div'),function(i,mydiv){
       leftPos += $(mydiv).width();
     });
     var submenu = $('<div/>').css({'top':0,'left':leftPos}).appendTo(container);
-    if($.browser.msie) { $(submenu).width('200px'); } // Cuz IE don't support auto width
+    // Set column width
+    if (width)
+    $(submenu).width(width);
     var subitems = $(item).data('sub').children('li');
     $.each(subitems,function(i,subitem){
-      var subsubitem = $(':eq(0)',subitem).clone(true).data('sub',$(subitem).children('ul')).appendTo(submenu);
+      var subsubitem = $(':eq(0)',subitem).clone(true).wrapInner("<span/>").data('sub',$(subitem).children('ul')).appendTo(submenu);
+      if (width)
+      $(subsubitem).css({'text-overflow':'ellipsis', '-o-text-overflow':'ellipsis','-ms-text-overflow':'ellipsis'});
       if($(subsubitem).data('sub').length) {
         $(subsubitem).addClass('hasChildMenu');
         addWidget(subsubitem);
@@ -222,6 +246,6 @@
     $('.widget').bind('click', function(event){
       event.preventDefault();
     });
-  }
 
+  }
 })(jQuery);
