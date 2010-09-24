@@ -123,6 +123,7 @@
         // Handle clicks
         if (event.type == "click"){
           var level = $('div',container).index($(self).parents('div'));
+          var isleafnode = false;
           // Remove blocks to the right in the tree, and 'deactivate' other
           // links within the same level, if metakey is not being used
           $('div:gt('+level+')',container).remove();
@@ -149,6 +150,7 @@
           }
           else if (!event.metaKey && !event.shiftKey) {
             // No children, show title instead (if it exists, or a link)
+            isleafnode = true;
             var title = $('<a/>').attr({href:$(self).attr('href')}).text($(self).attr('title') ? $(self).attr('title') : $(self).text());
             var featurebox = $('<div/>').html(title).addClass('feature').appendTo(container);
             // Fire preview handler function
@@ -163,6 +165,12 @@
             });
             var fillwidth = $(container).width() - remainingspace;
             $(featurebox).css({'top':0,'left':remainingspace}).width(fillwidth).show();  
+          }
+          // Fire onchange handler function, but only if multi-select is off.
+          // FIXME Need to deal multiple selections.
+          if ($.isFunction(settings.onchange) && !settings.multi) {
+            // We're passing the element back to the callback
+            var onchange = settings.onchange($(self), isleafnode);
           }
         }
         // Handle Keyboard navigation
@@ -196,7 +204,8 @@
   $.fn.columnview.defaults = {
     multi: false,     // Allow multiple selections
     preview: false,   // Handler for preview pane
-    fixedwidth: false // Use fixed width columns
+    fixedwidth: false,// Use fixed width columns
+    onchange: false   // Handler for selection change
   };
 
   // Generate deeper level menus
