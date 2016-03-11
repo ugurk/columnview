@@ -1,0 +1,1 @@
+Finder-like column view from hierarchical lists with jQuery
